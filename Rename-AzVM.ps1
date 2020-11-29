@@ -5,20 +5,13 @@ function Rename-AzVM {
 		and attaching associated resources.
 	.Description
 		Retrieves the VM object.
-		Checks if the virtual machine is is in a "deallocated state".
-		If the VM is not deallocated, shutdown and deallocates the VM.
+		Checks if the virtual machine is in a "deallocated state".
+		If the VM is not deallocated, shutdown and deallocate the VM.
 		Deletes the virtual machine object. 
-		Recreated the virtual machine object, attaching the existing 
+		Recreate the virtual machine object, attaching the existing 
 		NIC(s) and disk(s). 
 	.Example
-		C:\PS>Function-Name -param "Param Value"
-		
-		This example does something
-	.Notes
-		Name: Function-Name
-		Author: Author Name
-		Last Edit: Date
-		Keywords: Any keywords
+		> Rename-AzVM -VMName "Ubuntu01" -ResourceGroupName "MyRG" -OperatingSystem "Linux" -NewVMName "Ubuntu02"
 	.Link
 		https://github.com/sjohnsonsf/azure-renanme-vm
 	.Inputs
@@ -41,10 +34,20 @@ function Rename-AzVM {
 		)
 		PROCESS {
 			if ($pscmdlet.ShouldProcess("Continue?")) {
-				Write-Host "Renaming $VMName. VM will be shutdown..."
-				
-				$OriginalVM = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName
-				Write-Host 'Removing...' $originalVM.Name
+				Try {
+					$OriginalVM = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -ErrorAction "Stop"
+
+				} Catch {
+					Write-Host "$VMName was not found in Resource Group $ResourceGroupName. Aborting..."
+					Break
+				}
+				Write-Host 'Deallocating and renaming...' $originalVM.Name
+
+				#Retrieve the VM status and pull the PowerState from the last index position
+				$VMState = (Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -Status).statuses.code[-1]
+				if ($VMState -ne "PowerState/deallocated") {
+					Stop-AzVM -Name $VMName -ResourceGroupName $ResourceGroupName -Force
+				}
 				Remove-AzVM -ResourceGroupName $ResourceGroupName -Name $originalVM.Name -Force
 				Sleep 30 
 				
