@@ -36,23 +36,30 @@ function Rename-AzVM {
 			if ($pscmdlet.ShouldProcess("Continue?")) {
 				Try {
 					$OriginalVM = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -ErrorAction "Stop"
-
 				} Catch {
 					Write-Host "$VMName was not found in Resource Group $ResourceGroupName. Aborting..."
 					Break
 				}
 				Write-Host 'Deallocating and renaming...' $originalVM.Name
-
 				#Retrieve the VM status and pull the PowerState from the last index position
 				$VMState = (Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -Status).statuses.code[-1]
 				if ($VMState -ne "PowerState/deallocated") {
 					Stop-AzVM -Name $VMName -ResourceGroupName $ResourceGroupName -Force
 				}
 				Remove-AzVM -ResourceGroupName $ResourceGroupName -Name $originalVM.Name -Force
-				Sleep 30 
-				
+				Sleep 30
 				$NewVM = New-AzVMConfig -VMName $NewVMName -VMSize $OriginalVM.HardwareProfile.VmSize
+				
+				if ($OriginalVM.AvailabilitySetReference.Id) {
+					$NewVM.AvailabilitySetId = $OriginalVM.AvailabilitySetReference.Id
+				} elseif ($OriginalVM.Zones) {
+					$NewVM.Zone = $OriginalVM.Zones
+				}
+				if ($OriginalVM.Tags) {
+					$NewVM.Tags = $OriginalVM.Tags
+				}
 				if ($OperatingSystem -eq "Linux") {
+					#params splatted for readability
 					$params = @{
 						VM = $NewVM
 						CreateOption = "Attach"
@@ -97,3 +104,4 @@ function Rename-AzVM {
 			}
 		}
 	} #End function
+Rename-AzVM -ResourceGroupName "TheLab" -VMName "CentOS08" -OperatingSystem "Linux" -NewVMName "CentOS09"
