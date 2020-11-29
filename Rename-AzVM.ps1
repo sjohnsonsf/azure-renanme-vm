@@ -94,4 +94,3 @@ function Rename-AzVM {
 			}
 		}
 	} #End function
-Rename-AzVM -ResourceGroupName "TheLab" -VMName "CentOS01" -OperatingSystem "Linux" -NewVMName "CentOS02"
